@@ -1,0 +1,30 @@
+.board {
+  position: relative;
+}
+
+.tile-layer {
+  position: absolute;
+  inset: var(--gap);
+  pointer-events: none;
+}
+
+.game-tile {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: calc((100% - 3 * var(--gap)) / 4);
+  height: calc((100% - 3 * var(--gap)) / 4);
+  border-radius: 10px;
+}
+
+.game-tile > span {
+  display: block;
+}
+
+@media (max-width: 480px) {
+  .game-tile {
+    border-radius: 8px;
+  }
+}
