@@ -4,9 +4,11 @@ const board = document.querySelector('#board');
 const scoreElement = document.querySelector('#score');
 const bestScoreElement = document.querySelector('#best-score');
 const restartButton = document.querySelector('#restart-button');
+const undoButton = document.querySelector('#undo-button');
 
 const boardSize = 4;
 const cellCount = boardSize * boardSize;
+const storageKey = 'christmas-2048.game.v1';
 const tileElements = new Map();
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
@@ -16,6 +18,8 @@ let score = 0;
 let bestScore = 0;
 let gameOver = false;
 let isMoving = false;
+let previousState = null;
+let storageMessage = '';
 
 const directions = {
   ArrowLeft: 'left',
@@ -121,7 +125,7 @@ function addRandomTile() {
   }
 
   if (emptyIndexes.length === 0) {
-    return null;
+    return Promise.resolve();
   }
 
   const randomIndex = Math.floor(Math.random() * emptyIndexes.length);
@@ -147,15 +151,145 @@ function addRandomTile() {
   );
 }
 
+function getSnapshot() {
+  const values = Array(cellCount).fill(0);
+
+  for (const tile of tiles) {
+    values[tile.index] = tile.value;
+  }
+
+  return { values, score };
+}
+
+function isValidSnapshot(snapshot) {
+  if (
+    !snapshot ||
+    !Number.isSafeInteger(snapshot.score) ||
+    snapshot.score < 0 ||
+    !Array.isArray(snapshot.values) ||
+    snapshot.values.length !== cellCount
+  ) {
+    return false;
+  }
+
+  const validValues = snapshot.values.every((value) => {
+    return value === 0 || (
+      Number.isSafeInteger(value) &&
+      value >= 2 &&
+      Number.isInteger(Math.log2(value))
+    );
+  });
+
+  return validValues && snapshot.values.some((value) => value !== 0);
+}
+
+function restoreSnapshot(snapshot) {
+  tiles = [];
+  tileElements.clear();
+  tileLayer.replaceChildren();
+  score = snapshot.score;
+
+  snapshot.values.forEach((value, index) => {
+    if (value === 0) {
+      return;
+    }
+
+    const tile = {
+      id: nextId,
+      value,
+      index
+    };
+
+    nextId += 1;
+    tiles.push(tile);
+    createTileElement(tile);
+  });
+
+  gameOver = !hasAvailableMoves();
+}
+
+function saveGame() {
+  const data = {
+    version: 1,
+    current: getSnapshot(),
+    previous: previousState,
+    bestScore
+  };
+
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(data));
+    storageMessage = '';
+  } catch {
+    storageMessage =
+      'Браузер не смог сохранить игру. После обновления прогресс может потеряться.';
+  }
+}
+
+function loadGame() {
+  try {
+    const saved = localStorage.getItem(storageKey);
+
+    if (saved === null) {
+      return false;
+    }
+
+    const data = JSON.parse(saved);
+
+    if (
+      !data ||
+      data.version !== 1 ||
+      !isValidSnapshot(data.current)
+    ) {
+      storageMessage =
+        'Сохранённая игра повреждена. Начата новая партия.';
+      return false;
+    }
+
+    restoreSnapshot(data.current);
+
+    previousState = !gameOver && isValidSnapshot(data.previous)
+      ? data.previous
+      : null;
+
+    const savedBest = Number.isSafeInteger(data.bestScore)
+      ? data.bestScore
+      : 0;
+
+    bestScore = Math.max(
+      savedBest,
+      score,
+      previousState?.score ?? 0
+    );
+
+    return true;
+  } catch {
+    storageMessage =
+      'Не удалось восстановить сохранённую игру. Начата новая партия.';
+    return false;
+  }
+}
+
 function updateInterface() {
   scoreElement.textContent = String(score);
   bestScoreElement.textContent = String(bestScore);
-  restartButton.disabled = isMoving;
 
-  gameMessage.hidden = !gameOver;
-  gameMessage.textContent = gameOver
-    ? 'Ходов больше нет. Нажми «Новая игра», чтобы попробовать снова.'
-    : '';
+  restartButton.disabled = isMoving;
+  undoButton.disabled = isMoving || gameOver || previousState === null;
+
+  const messages = [];
+
+  if (gameOver) {
+    messages.push(
+      'Ходов больше нет. Нажми «Новая игра», чтобы попробовать снова.'
+    );
+  }
+
+  if (storageMessage) {
+    messages.push(storageMessage);
+  }
+
+  gameMessage.hidden = messages.length === 0;
+  gameMessage.textContent = messages.join(' ');
 }
 
 function startNewGame() {
@@ -166,13 +300,31 @@ function startNewGame() {
   tiles = [];
   score = 0;
   gameOver = false;
+  previousState = null;
 
   tileElements.clear();
   tileLayer.replaceChildren();
 
   addRandomTile();
   addRandomTile();
+
+  saveGame();
   updateInterface();
+}
+
+function undoMove() {
+  if (isMoving || gameOver || previousState === null) {
+    return;
+  }
+
+  const snapshot = previousState;
+  previousState = null;
+
+  restoreSnapshot(snapshot);
+  saveGame();
+  updateInterface();
+
+  restartButton.focus();
 }
 
 function getLineIndexes(direction, lineIndex) {
@@ -341,6 +493,7 @@ async function move(direction) {
     return;
   }
 
+  previousState = getSnapshot();
   isMoving = true;
   updateInterface();
 
@@ -352,6 +505,12 @@ async function move(direction) {
 
     await addRandomTile();
     gameOver = !hasAvailableMoves();
+
+    if (gameOver) {
+      previousState = null;
+    }
+
+    saveGame();
   } finally {
     isMoving = false;
     updateInterface();
@@ -380,6 +539,18 @@ document.addEventListener('keydown', (event) => {
 });
 
 restartButton.addEventListener('click', startNewGame);
+undoButton.addEventListener('click', undoMove);
 
 createBoard();
-startNewGame();
+
+if (loadGame()) {
+  updateInterface();
+} else {
+  const loadMessage = storageMessage;
+  startNewGame();
+
+  if (loadMessage && !storageMessage) {
+    storageMessage = loadMessage;
+    updateInterface();
+  }
+}
