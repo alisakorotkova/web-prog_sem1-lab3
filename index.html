@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>2048 - Christmas edition</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/app.js" defer></script>
+</head>
+
+<body>
+  <main class="game">
+    <header class="game-header">
+      <div class="brand">
+        <p class="edition" lang="en">
+          <span aria-hidden="true">✳</span>
+          Christmas edition
+        </p>
+        <h1>2048</h1>
+      </div>
+
+      <div class="scores" aria-label="Очки">
+        <div class="score-card">
+          <span class="score-label">Счёт</span>
+          <span class="score-value" id="score">0</span>
+        </div>
+
+        <div class="score-card score-card-best">
+          <span class="score-label">Рекорд</span>
+          <span class="score-value" id="best-score">0</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="toolbar" role="group" aria-label="Действия игры">
+      <button class="button button-primary" id="restart-button"
+              type="button" disabled>
+        Новая игра
+      </button>
+
+      <button class="button" id="undo-button"
+              type="button" disabled>
+        Отменить ход
+      </button>
+
+      <button class="button" id="leaders-button"
+              type="button" disabled>
+        Рекорды
+      </button>
+    </div>
+
+    <section class="board-section" aria-label="Игровое поле">
+      <div class="board" id="board"
+           role="group" aria-label="Поле 4 на 4"></div>
+    </section>
+
+    <footer class="game-footer">
+      <span lang="en">A little winter challenge</span>
+      <span aria-hidden="true">✳</span>
+    </footer>
+  </main>
+</body>
+</html>
