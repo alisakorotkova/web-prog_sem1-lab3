@@ -5,12 +5,33 @@ const scoreElement = document.querySelector('#score');
 const bestScoreElement = document.querySelector('#best-score');
 const restartButton = document.querySelector('#restart-button');
 const undoButton = document.querySelector('#undo-button');
+const leadersButton = document.querySelector('#leaders-button');
+
+const gameOverDialog = document.querySelector('#game-over-dialog');
+const finalScoreElement = document.querySelector('#final-score');
+const recordForm = document.querySelector('#record-form');
+const playerNameInput = document.querySelector('#player-name');
+const recordMessage = document.querySelector('#record-message');
+const gameOverRestart = document.querySelector('#game-over-restart');
+const gameOverLeaders = document.querySelector('#game-over-leaders');
+
+const leadersDialog = document.querySelector('#leaders-dialog');
+const closeLeadersButton = document.querySelector('#close-leaders');
+const leadersEmpty = document.querySelector('#leaders-empty');
+const leadersTableWrapper = document.querySelector('#leaders-table-wrapper');
+const leadersBody = document.querySelector('#leaders-body');
 
 const boardSize = 4;
 const cellCount = boardSize * boardSize;
 const storageKey = 'christmas-2048.game.v1';
 const tileElements = new Map();
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+const dateFormatter = new Intl.DateTimeFormat('ru-RU', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric'
+});
 
 let tiles = [];
 let nextId = 1;
@@ -20,6 +41,8 @@ let gameOver = false;
 let isMoving = false;
 let previousState = null;
 let storageMessage = '';
+let leaderboard = [];
+let resultSaved = false;
 
 const directions = {
   ArrowLeft: 'left',
@@ -208,20 +231,45 @@ function restoreSnapshot(snapshot) {
   gameOver = !hasAvailableMoves();
 }
 
+function isValidRecord(record) {
+  return (
+    record !== null &&
+    typeof record === 'object' &&
+    typeof record.name === 'string' &&
+    record.name.trim().length > 0 &&
+    record.name.length <= 24 &&
+    Number.isSafeInteger(record.score) &&
+    record.score >= 0 &&
+    typeof record.date === 'string' &&
+    Number.isFinite(Date.parse(record.date))
+  );
+}
+
+function sortRecords(records) {
+  return [...records].sort((first, second) => {
+    return second.score - first.score ||
+      Date.parse(first.date) - Date.parse(second.date);
+  });
+}
+
 function saveGame() {
   const data = {
     version: 1,
     current: getSnapshot(),
     previous: previousState,
-    bestScore
+    bestScore,
+    leaderboard,
+    resultSaved
   };
 
   try {
     localStorage.setItem(storageKey, JSON.stringify(data));
     storageMessage = '';
+    return true;
   } catch {
     storageMessage =
-      'Браузер не смог сохранить игру. После обновления прогресс может потеряться.';
+      'Браузер не смог сохранить данные. После обновления прогресс может потеряться.';
+    return false;
   }
 }
 
@@ -235,13 +283,29 @@ function loadGame() {
 
     const data = JSON.parse(saved);
 
-    if (
-      !data ||
-      data.version !== 1 ||
-      !isValidSnapshot(data.current)
-    ) {
+    if (!data || data.version !== 1) {
       storageMessage =
-        'Сохранённая игра повреждена. Начата новая партия.';
+        'Не удалось прочитать сохранение. Начата новая партия.';
+      return false;
+    }
+
+    leaderboard = Array.isArray(data.leaderboard)
+      ? sortRecords(data.leaderboard.filter(isValidRecord)).slice(0, 10)
+      : [];
+
+    const savedBest = Number.isSafeInteger(data.bestScore)
+      ? data.bestScore
+      : 0;
+
+    bestScore = Math.max(
+      0,
+      savedBest,
+      ...leaderboard.map((record) => record.score)
+    );
+
+    if (!isValidSnapshot(data.current)) {
+      storageMessage =
+        'Сохранённое поле повреждено. Начата новая партия.';
       return false;
     }
 
@@ -251,21 +315,29 @@ function loadGame() {
       ? data.previous
       : null;
 
-    const savedBest = Number.isSafeInteger(data.bestScore)
-      ? data.bestScore
-      : 0;
-
-    bestScore = Math.max(
-      savedBest,
-      score,
-      previousState?.score ?? 0
-    );
+    bestScore = Math.max(bestScore, score, previousState?.score ?? 0);
+    resultSaved = gameOver && data.resultSaved === true;
 
     return true;
   } catch {
     storageMessage =
-      'Не удалось восстановить сохранённую игру. Начата новая партия.';
+      'Не удалось восстановить игру. Начата новая партия.';
     return false;
+  }
+}
+
+function updateGameOverDialog() {
+  finalScoreElement.textContent = String(score);
+  recordForm.hidden = resultSaved;
+
+  if (resultSaved) {
+    recordMessage.hidden = false;
+    recordMessage.classList.remove('is-error');
+    recordMessage.textContent = 'Ваш рекорд сохранён';
+  }
+
+  if (!gameOverDialog.open) {
+    gameOverDialog.showModal();
   }
 }
 
@@ -274,22 +346,15 @@ function updateInterface() {
   bestScoreElement.textContent = String(bestScore);
 
   restartButton.disabled = isMoving;
+  leadersButton.disabled = isMoving;
   undoButton.disabled = isMoving || gameOver || previousState === null;
 
-  const messages = [];
+  gameMessage.hidden = !storageMessage;
+  gameMessage.textContent = storageMessage;
 
-  if (gameOver) {
-    messages.push(
-      'Ходов больше нет. Нажми «Новая игра», чтобы попробовать снова.'
-    );
+  if (gameOver && !isMoving && !leadersDialog.open) {
+    updateGameOverDialog();
   }
-
-  if (storageMessage) {
-    messages.push(storageMessage);
-  }
-
-  gameMessage.hidden = messages.length === 0;
-  gameMessage.textContent = messages.join(' ');
 }
 
 function startNewGame() {
@@ -301,6 +366,17 @@ function startNewGame() {
   score = 0;
   gameOver = false;
   previousState = null;
+  resultSaved = false;
+
+  gameOverDialog.close();
+  leadersDialog.close();
+
+  recordForm.reset();
+  playerNameInput.setCustomValidity('');
+  recordForm.hidden = false;
+  recordMessage.hidden = true;
+  recordMessage.textContent = '';
+  recordMessage.classList.remove('is-error');
 
   tileElements.clear();
   tileLayer.replaceChildren();
@@ -313,7 +389,12 @@ function startNewGame() {
 }
 
 function undoMove() {
-  if (isMoving || gameOver || previousState === null) {
+  if (
+    isMoving ||
+    gameOver ||
+    leadersDialog.open ||
+    previousState === null
+  ) {
     return;
   }
 
@@ -325,6 +406,83 @@ function undoMove() {
   updateInterface();
 
   restartButton.focus();
+}
+
+function renderLeaderboard() {
+  leadersBody.replaceChildren();
+
+  leadersEmpty.hidden = leaderboard.length > 0;
+  leadersTableWrapper.hidden = leaderboard.length === 0;
+
+  for (const record of leaderboard) {
+    const row = document.createElement('tr');
+    const nameCell = document.createElement('td');
+    const scoreCell = document.createElement('td');
+    const dateCell = document.createElement('td');
+    const time = document.createElement('time');
+
+    nameCell.textContent = record.name;
+    scoreCell.textContent = String(record.score);
+    time.dateTime = record.date;
+    time.textContent = dateFormatter.format(new Date(record.date));
+
+    dateCell.append(time);
+    row.append(nameCell, scoreCell, dateCell);
+    leadersBody.append(row);
+  }
+}
+
+function openLeaderboard() {
+  if (isMoving || leadersDialog.open) {
+    return;
+  }
+
+  renderLeaderboard();
+  gameOverDialog.close();
+  leadersDialog.showModal();
+}
+
+function saveResult(event) {
+  event.preventDefault();
+
+  if (!gameOver || resultSaved) {
+    return;
+  }
+
+  const name = playerNameInput.value.trim();
+
+  if (!name) {
+    playerNameInput.setCustomValidity('Введи имя.');
+    playerNameInput.reportValidity();
+    return;
+  }
+
+  const oldLeaderboard = leaderboard;
+
+  const record = {
+    name,
+    score,
+    date: new Date().toISOString()
+  };
+
+  leaderboard = sortRecords([...leaderboard, record]).slice(0, 10);
+  resultSaved = true;
+
+  if (!saveGame()) {
+    leaderboard = oldLeaderboard;
+    resultSaved = false;
+
+    recordMessage.hidden = false;
+    recordMessage.classList.add('is-error');
+    recordMessage.textContent =
+      'Не удалось сохранить результат. Попробуй ещё раз.';
+
+    updateInterface();
+    return;
+  }
+
+  updateInterface();
+  gameOverRestart.focus();
 }
 
 function getLineIndexes(direction, lineIndex) {
@@ -483,7 +641,12 @@ function hasAvailableMoves() {
 }
 
 async function move(direction) {
-  if (gameOver || isMoving) {
+  if (
+    gameOver ||
+    isMoving ||
+    leadersDialog.open ||
+    gameOverDialog.open
+  ) {
     return;
   }
 
@@ -526,6 +689,8 @@ document.addEventListener('keydown', (event) => {
     event.ctrlKey ||
     event.metaKey ||
     event.altKey ||
+    leadersDialog.open ||
+    gameOverDialog.open ||
     target.closest('input, textarea, select, [contenteditable]')
   ) {
     return;
@@ -538,8 +703,47 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
+playerNameInput.addEventListener('input', () => {
+  playerNameInput.setCustomValidity('');
+});
+
+recordForm.addEventListener('submit', saveResult);
+
 restartButton.addEventListener('click', startNewGame);
 undoButton.addEventListener('click', undoMove);
+leadersButton.addEventListener('click', openLeaderboard);
+gameOverLeaders.addEventListener('click', openLeaderboard);
+gameOverRestart.addEventListener('click', startNewGame);
+
+closeLeadersButton.addEventListener('click', () => {
+  leadersDialog.close();
+});
+
+leadersDialog.addEventListener('click', (event) => {
+  if (event.target !== leadersDialog) {
+    return;
+  }
+
+  const bounds = leadersDialog.getBoundingClientRect();
+
+  const clickedOutside =
+    event.clientX < bounds.left ||
+    event.clientX > bounds.right ||
+    event.clientY < bounds.top ||
+    event.clientY > bounds.bottom;
+
+  if (clickedOutside) {
+    leadersDialog.close();
+  }
+});
+
+leadersDialog.addEventListener('close', () => {
+  updateInterface();
+});
+
+gameOverDialog.addEventListener('cancel', (event) => {
+  event.preventDefault();
+});
 
 createBoard();
 

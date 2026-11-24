@@ -1,0 +1,213 @@
+[hidden] {
+  display: none !important;
+}
+
+.game-dialog {
+  width: min(460px, calc(100% - 32px));
+  max-height: 90dvh;
+  margin: auto;
+  padding: 28px;
+  overflow-y: auto;
+  border: 0;
+  border-radius: 20px;
+  background: var(--background);
+  color: var(--ink);
+  box-shadow: 0 24px 80px rgb(20 45 35 / 18%);
+}
+
+.game-dialog::backdrop {
+  background: rgb(20 40 32 / 40%);
+}
+
+.game-dialog h2 {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.15;
+}
+
+.dialog-eyebrow {
+  margin: 0 0 8px;
+  color: var(--red);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.dialog-description {
+  margin: 18px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.final-score {
+  margin: 4px 0 24px;
+  color: var(--green);
+  font-size: clamp(40px, 10vw, 64px);
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.record-form {
+  display: grid;
+  gap: 10px;
+}
+
+.record-label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.record-form input {
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid #bcc9be;
+  border-radius: 10px;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+}
+
+.record-form input:focus-visible {
+  outline: 3px solid #32728c;
+  outline-offset: 3px;
+}
+
+.record-message {
+  margin: 16px 0 0;
+  color: var(--green);
+  font-size: 14px;
+}
+
+.record-message.is-error {
+  color: var(--red);
+}
+
+.dialog-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dialog-close {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #e4eee7;
+  color: var(--green);
+  cursor: pointer;
+}
+
+.dialog-close::before,
+.dialog-close::after {
+  content: "";
+  grid-area: 1 / 1;
+  width: 18px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  transform: rotate(45deg);
+}
+
+.dialog-close::after {
+  transform: rotate(-45deg);
+}
+
+.table-wrapper {
+  margin-top: 24px;
+  overflow-x: auto;
+}
+
+.leaders-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 14px;
+}
+
+.leaders-table th,
+.leaders-table td {
+  padding: 12px 6px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.leaders-table th {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.leaders-table th:first-child {
+  width: 40%;
+}
+
+.leaders-table th:nth-child(2) {
+  width: 25%;
+}
+
+.leaders-table th:last-child {
+  width: 35%;
+}
+
+.leaders-table td:nth-child(2) {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.leaders-table td:last-child {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.leaders-table tbody tr:first-child {
+  background: #e4eee7;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 400px) {
+  .game-dialog {
+    padding: 22px 18px;
+  }
+
+  .game-dialog h2 {
+    font-size: 24px;
+  }
+
+  .dialog-actions {
+    grid-template-columns: 1fr;
+  }
+}

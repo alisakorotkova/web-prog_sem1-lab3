@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>2048 - Christmas edition</title>
+  <title>2048 — Christmas edition</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/dialogs.css">
   <script src="js/app.js" defer></script>
 </head>
 
@@ -35,7 +36,7 @@
 
     <div class="toolbar" role="group" aria-label="Действия игры">
       <button class="button button-primary" id="restart-button"
-              type="button" disabled>
+              type="button">
         Новая игра
       </button>
 
@@ -45,7 +46,7 @@
       </button>
 
       <button class="button" id="leaders-button"
-              type="button" disabled>
+              type="button">
         Рекорды
       </button>
     </div>
@@ -60,5 +61,76 @@
       <span aria-hidden="true">✳</span>
     </footer>
   </main>
+
+  <dialog class="game-dialog" id="game-over-dialog"
+          aria-labelledby="game-over-title">
+    <p class="dialog-eyebrow" lang="en">One more try?</p>
+    <h2 id="game-over-title">Ходов больше нет</h2>
+    <p class="dialog-description">Твой результат</p>
+    <p class="final-score" id="final-score">0</p>
+
+    <form class="record-form" id="record-form">
+      <label class="record-label" for="player-name">
+        Имя для таблицы рекордов
+      </label>
+      <input
+        id="player-name"
+        name="playerName"
+        type="text"
+        placeholder="Как тебя записать?"
+        maxlength="24"
+        required
+      >
+      <button class="button button-primary" type="submit">
+        Сохранить результат
+      </button>
+    </form>
+
+    <p class="record-message" id="record-message"
+       role="status" hidden></p>
+
+    <div class="dialog-actions">
+      <button class="button" id="game-over-leaders" type="button">
+        Рекорды
+      </button>
+      <button class="button button-primary"
+              id="game-over-restart" type="button">
+        Начать заново
+      </button>
+    </div>
+  </dialog>
+
+  <dialog class="game-dialog" id="leaders-dialog"
+          aria-labelledby="leaders-title">
+    <div class="dialog-header">
+      <div>
+        <p class="dialog-eyebrow" lang="en">Top 10</p>
+        <h2 id="leaders-title">Рекорды</h2>
+      </div>
+      <button class="dialog-close" id="close-leaders"
+        type="button" aria-label="Закрыть рекорды">
+      </button>
+    </div>
+
+    <p class="dialog-description" id="leaders-empty">
+      Здесь появятся твои сохранённые результаты.
+    </p>
+
+    <div class="table-wrapper" id="leaders-table-wrapper" hidden>
+      <table class="leaders-table">
+        <caption class="visually-hidden">
+          Десять лучших сохранённых результатов
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Имя</th>
+            <th scope="col">Очки</th>
+            <th scope="col">Дата</th>
+          </tr>
+        </thead>
+        <tbody id="leaders-body"></tbody>
+      </table>
+    </div>
+  </dialog>
 </body>
 </html>
