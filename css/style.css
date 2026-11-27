@@ -165,6 +165,8 @@ h1 {
   padding: var(--gap);
   border-radius: 20px;
   background: var(--board);
+  touch-action: pinch-zoom;
+  user-select: none;
 }
 
 .cell {
